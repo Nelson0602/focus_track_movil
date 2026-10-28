@@ -1,121 +1,254 @@
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const FocusTrackApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+/// Widget raiz inmutable que configura el tema visual de la aplicacion
+class FocusTrackApp extends StatelessWidget {
+  const FocusTrackApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'FocusTrack Móvil',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1A237E), // Azul Índigo Universitario
+          brightness: Brightness.light,
+        ),
+        appBarTheme: const AppBarTheme(
+          centerTitle: true,
+          elevation: 2,
+        ),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const PantallaPrincipalMetas(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+/// Pantalla con estado reactivo para registrar metas y productividad
+class PantallaPrincipalMetas extends StatefulWidget {
+  const PantallaPrincipalMetas({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<PantallaPrincipalMetas> createState() =>
+      _PantallaPrincipalMetasState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _PantallaPrincipalMetasState extends State<PantallaPrincipalMetas> {
+  int _metasCompletadas = 0;
+  int _metaObjetivo = 5;
+  String _nivelProductividad = 'Inicial';
 
-  void _incrementCounter() {
+  void _actualizarNivel() {
+    if (_metasCompletadas == 0) {
+      _nivelProductividad = 'Inicial';
+    } else if (_metasCompletadas < _metaObjetivo) {
+      _nivelProductividad = 'En Progreso';
+    } else if (_metasCompletadas == _metaObjetivo) {
+      _nivelProductividad = '¡Objetivo Alcanzado!';
+    } else {
+      _nivelProductividad = '¡Sobresaliente (+${_metasCompletadas - _metaObjetivo})!';
+    }
+  }
+
+  void _incrementarMeta() {
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      _metasCompletadas++;
+      _actualizarNivel();
     });
+  }
+
+  void _decrementarMeta() {
+    setState(() {
+      if (_metasCompletadas > 0) {
+        _metasCompletadas--;
+        _actualizarNivel();
+      }
+    });
+  }
+
+  void _reiniciarContadores() {
+    showDialog(
+      context: context,
+      builder: (BuildContext ctx) {
+        return AlertDialog(
+          title: const Text('Confirmar Reinicio'),
+          content: const Text(
+            '¿Desea restablecer todas las metas completadas a cero?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                setState(() {
+                  _metasCompletadas = 0;
+                  _actualizarNivel();
+                });
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Metas restablecidas exitosamente.'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+              child: const Text('Reiniciar'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    final tema = Theme.of(context);
+    final colores = tema.colorScheme;
+    final porcentaje = (_metasCompletadas / _metaObjetivo).clamp(0.0, 1.0);
+
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: const Text('FocusTrack Móvil'),
+        backgroundColor: colores.primaryContainer,
+        foregroundColor: colores.onPrimaryContainer,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.restart_alt),
+            tooltip: 'Reiniciar sesión de metas',
+            onPressed: _reiniciarContadores,
+          ),
+        ],
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+      // SafeArea garantiza visualizacion correcta fuera del notch
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 20.0,
+            vertical: 24.0,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Tarjeta de Resumen Ejecutivo
+              Card(
+                elevation: 3.0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16.0),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.track_changes,
+                        size: 52.0,
+                        color: colores.primary,
+                      ),
+                      const SizedBox(height: 12.0),
+                      Text(
+                        'Progreso del Día',
+                        style: tema.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8.0),
+                      Text(
+                        '$_metasCompletadas / $_metaObjetivo',
+                        style: tema.textTheme.displayMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: colores.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 12.0),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8.0),
+                        child: LinearProgressIndicator(
+                          value: porcentaje,
+                          minHeight: 10.0,
+                          backgroundColor: colores.surfaceContainerHighest,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            _metasCompletadas >= _metaObjetivo
+                                ? Colors.teal
+                                : colores.primary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12.0),
+                      Chip(
+                        avatar: Icon(
+                          _metasCompletadas >= _metaObjetivo
+                              ? Icons.emoji_events
+                              : Icons.bolt,
+                          color: colores.onSecondaryContainer,
+                        ),
+                        label: Text(
+                          _nivelProductividad,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: colores.onSecondaryContainer,
+                          ),
+                        ),
+                        backgroundColor: colores.secondaryContainer,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24.0),
+
+              // Panel de Informacion Tecnica
+              Card(
+                elevation: 1.0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                  side: BorderSide(
+                    color: colores.outlineVariant,
+                  ),
+                ),
+                child: const ListTile(
+                  leading: Icon(Icons.info_outline),
+                  title: Text('Sesión Móvil Activa'),
+                  subtitle: Text(
+                    'Renderizado nativo impulsado por el motor Impeller '
+                    'y gestionado con Hot Reload.',
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+
+      // Botones Flotantes de Accion
+      floatingActionButton: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            heroTag: 'btn_decrementar',
+            onPressed: _decrementarMeta,
+            tooltip: 'Restar meta completada',
+            backgroundColor: colores.surfaceContainerHighest,
+            foregroundColor: colores.onSurfaceVariant,
+            child: const Icon(Icons.remove),
+          ),
+          const SizedBox(width: 14.0),
+          FloatingActionButton.extended(
+            heroTag: 'btn_incrementar',
+            onPressed: _incrementarMeta,
+            tooltip: 'Completar meta',
+            backgroundColor: colores.primary,
+            foregroundColor: colores.onPrimary,
+            icon: const Icon(Icons.check),
+            label: const Text('Completar Meta'),
+          ),
+        ],
       ),
     );
   }
