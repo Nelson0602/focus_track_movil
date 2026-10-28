@@ -4,6 +4,19 @@ void main() {
   runApp(const FocusTrackApp());
 }
 
+// Niveles de prioridad de la sesion con su texto, color e icono
+enum Priority {
+  low('Baja', Color(0xFF607D8B), Icons.arrow_downward),
+  medium('Media', Color(0xFFEF6C00), Icons.drag_handle),
+  high('Alta', Color(0xFF8E1B2E), Icons.priority_high);
+
+  const Priority(this.label, this.color, this.icon);
+
+  final String label;
+  final Color color;
+  final IconData icon;
+}
+
 /// Widget raiz inmutable que configura el tema visual de la aplicacion
 class FocusTrackApp extends StatelessWidget {
   const FocusTrackApp({super.key});
@@ -43,6 +56,12 @@ class _PantallaPrincipalMetasState extends State<PantallaPrincipalMetas> {
   int _metaObjetivo = 5;
   String _nivelProductividad = 'Inicial';
 
+  // Tope maximo de metas permitido por dia
+  static const int _maxDailyGoals = 10;
+
+  // Prioridad elegida para la sesion actual
+  Priority _selectedPriority = Priority.low;
+
   void _actualizarNivel() {
     if (_metasCompletadas == 0) {
       _nivelProductividad = 'Inicial';
@@ -56,6 +75,11 @@ class _PantallaPrincipalMetasState extends State<PantallaPrincipalMetas> {
   }
 
   void _incrementarMeta() {
+    // Si ya se llego al tope no se suma y se avisa al usuario
+    if (_metasCompletadas >= _maxDailyGoals) {
+      _showLimitWarning();
+      return;
+    }
     setState(() {
       _metasCompletadas++;
       _actualizarNivel();
@@ -68,6 +92,43 @@ class _PantallaPrincipalMetasState extends State<PantallaPrincipalMetas> {
         _metasCompletadas--;
         _actualizarNivel();
       }
+    });
+  }
+
+  // Muestra la alerta de limite diario alcanzado
+  void _showLimitWarning() {
+    final colors = Theme.of(context).colorScheme;
+    final messenger = ScaffoldMessenger.of(context);
+    // Quita el aviso anterior para que el nuevo salga de inmediato
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        backgroundColor: colors.error,
+        duration: const Duration(seconds: 3),
+        content: Row(
+          children: [
+            Icon(
+              Icons.warning_amber_rounded,
+              color: colors.onError,
+            ),
+            const SizedBox(width: 12.0),
+            Expanded(
+              child: Text(
+                'Ha alcanzado el límite máximo diario de metas '
+                '($_maxDailyGoals/$_maxDailyGoals). ¡Excelente jornada!',
+                style: TextStyle(color: colors.onError),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Cambia la prioridad segun el segmento seleccionado
+  void _changePriority(Set<Priority> selection) {
+    setState(() {
+      _selectedPriority = selection.first;
     });
   }
 
@@ -203,21 +264,57 @@ class _PantallaPrincipalMetasState extends State<PantallaPrincipalMetas> {
               ),
               const SizedBox(height: 24.0),
 
+              // Selector segmentado de prioridad de la sesion
+              Text(
+                'Prioridad de la sesión',
+                style: tema.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8.0),
+              SegmentedButton<Priority>(
+                segments: [
+                  for (final priority in Priority.values)
+                    ButtonSegment<Priority>(
+                      value: priority,
+                      label: Text(priority.label),
+                      icon: Icon(priority.icon),
+                    ),
+                ],
+                selected: <Priority>{_selectedPriority},
+                onSelectionChanged: _changePriority,
+                style: SegmentedButton.styleFrom(
+                  selectedBackgroundColor: _selectedPriority.color,
+                  selectedForegroundColor: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 24.0),
+
               // Panel de Informacion Tecnica
               Card(
                 elevation: 1.0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12.0),
+                  // El borde toma el color de la prioridad elegida
                   side: BorderSide(
-                    color: colores.outlineVariant,
+                    color: _selectedPriority.color,
+                    width: 2.0,
                   ),
                 ),
-                child: const ListTile(
-                  leading: Icon(Icons.info_outline),
-                  title: Text('Sesión Móvil Activa'),
+                child: ListTile(
+                  leading: Icon(
+                    _selectedPriority.icon,
+                    color: _selectedPriority.color,
+                  ),
+                  title: const Text('Sesión Móvil Activa'),
                   subtitle: Text(
+                    'Prioridad ${_selectedPriority.label}. '
                     'Renderizado nativo impulsado por el motor Impeller '
                     'y gestionado con Hot Reload.',
+                    style: TextStyle(
+                      color: _selectedPriority.color,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
